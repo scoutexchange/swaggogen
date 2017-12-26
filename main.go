@@ -75,31 +75,31 @@ func main() {
 		log.Fatal(errors.Stack(err))
 	}
 
-	// What comments need to be parsed?
-	// Find all comments that could conceivably have our tags in them.
-	packageCommentBlocks := make(map[string][]string, 0)
+	// What pkgComments need to be parsed?
+	// Find all pkgComments with keywords.
+	pkgComments := make(map[string][]string, 0)
 	for importPath := range pkgInfos {
-		newBlocks, err := getCommentBlocks(importPath)
+		newBlocks, err := getRelevantComments(importPath)
 		if err != nil {
 			log.Fatal(errors.Stack(err))
 		}
 
-		packageCommentBlocks[importPath] = newBlocks
+		pkgComments[importPath] = newBlocks
 	}
 
-	// Now, let's check all of the comment blocks we found for tags, parsing them as necessary.
-	apiCommentBlocks := make([]string, 0)
-	for _, commentBlocks := range packageCommentBlocks {
-		newApiComments := detectApiCommentBlocks(commentBlocks){
-			apiCommentBlocks = append(apiCommentBlocks, newApiComments...)
-		}
+	// Now, we need to organize the pkgComments and parse them.
+
+	apiComments := make([]string, 0)
+	for _, commentBlocks := range pkgComments {
+		newApiComments := extractApiComments(commentBlocks)
+		apiComments = append(apiComments, newApiComments...)
 	}
-	apiIntermediate := intermediatateApi(apiCommentBlocks)
+	apiIntermediate := intermediatateApi(apiComments)
 
 	// We need to know the package so we know where to look for the types.
 	operationPkgComments := make(map[string][]string)
-	for importPath, comments := range packageCommentBlocks {
-		operationPkgComments[importPath] = hasPathComments(comments)
+	for importPath, comments := range pkgComments {
+		operationPkgComments[importPath] = extractOperationComments(comments)
 	}
 
 	operationIntermediates := make([]OperationIntermediate, 0)
