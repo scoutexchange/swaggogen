@@ -1,1 +1,1 @@
-* Andrew Roy Jackman (andrew.jackman@emssoftware.com)
+* Andrew Roy Jackman (jackman@jackmanlabs.com)

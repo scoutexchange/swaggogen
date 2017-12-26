@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func getRelevantComments(pkgPath string) ([]string, error) {
+func getCommentBlocks(pkgPath string) ([]string, error) {
 
 	bpkg, err := build.Import(pkgPath, srcPath, 0)
 	if err != nil {
@@ -65,23 +65,38 @@ func (this *CommentVisitor) Visit(node ast.Node) (w ast.Visitor) {
 	return this
 }
 
-func extractOperationComments(comments []string) []string {
-	return extractComments(comments, "@Router")
+// This is used to detect blocks with 'OpenAPI Path:'. A comment block that describes a path/operation is useless if it
+// fails to describe the path. Therefore, this is a good indicator.
+func hasPathComments(commentBlocks []string) []string {
+	return detectComments(commentBlocks, "OpenAPI Path:")
 }
 
-func extractApiComments(comments []string) []string {
-	return extractComments(comments, "@APITitle")
+// This detects comments blocks with 'OpenAPI API Title:'. The API Title is a required member of the Swagger definition,
+// so it must be present.
+func detectApiCommentBlocks(commentBlocks []string) []string {
+	return detectComments(commentBlocks, "OpenAPI API Title:")
 }
 
-func extractComments(comments []string, keyword string) []string {
+// This detects comment blocks with 'OpenAPI Tag:'. There is no garantee that these tags declarations will be a part of
+// any other comment block.
+func detectTagComments(commentBlocks []string) []string {
+	return detectComments(commentBlocks, "OpenAPI Tag:")
+}
 
-	newComments := make([]string, 0)
 
-	for _, comment := range comments {
-		if strings.Contains(comment, keyword) {
-			newComments = append(newComments, comment)
+// Comment detection is case-insensitive.
+// Any comment blocks that prove to have the test string will be returned.
+func detectComments(commentBlocks []string, keyword string) []string {
+
+	keyword = strings.ToLower(keyword)
+	detectedBlocks := make([]string, 0)
+
+	for _, comment := range commentBlocks {
+		comment_ := strings.ToLower(comment)
+		if strings.Contains(comment_, keyword) {
+			detectedBlocks = append(detectedBlocks, comment)
 		}
 	}
 
-	return newComments
+	return detectedBlocks
 }
