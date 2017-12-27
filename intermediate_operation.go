@@ -13,14 +13,14 @@ import (
 // in the comments. A collection of these can be combined and transformed to
 // create the swagger hierarchy.
 type OperationIntermediate struct {
-	Title       string
-	Description string
 	Accepts     []string
-	Parameters  []ParameterIntermediate
-	Responses   []*ResponseIntermediate
-	Path        string
+	Description string
 	Method      string
 	PackagePath string // Where this operation was found.
+	Parameters  []ParameterIntermediate
+	Path        string
+	Responses   []*ResponseIntermediate
+	Summary     string
 	Tag         string
 }
 
@@ -55,6 +55,9 @@ func (this *ResponseIntermediate) Schema() *spec.Schema {
 func intermediatateOperation(commentBlock string) OperationIntermediate {
 
 	/*
+		OpenAPI Summary:
+			List Villages
+
 		OpenAPI Path:
 			/api/villages
 
@@ -72,8 +75,8 @@ func intermediatateOperation(commentBlock string) OperationIntermediate {
 		OpenAPI Request Body:
 			nil
 
-		OpenAPI Response Body:
-			[]types.Village
+		OpenAPI Responses:
+			200	[]types.Village	List of villages
 
 		OpenAPI Description:
 			This endpoint returns all of the villages that belong to the user and world
@@ -98,21 +101,48 @@ func intermediatateOperation(commentBlock string) OperationIntermediate {
 
 			In all circumstances, a set (array) is returned regardless of the quantity
 			of villages returned.
+
+		OpenAPI Tags:
+			Villages
+
+		OpenAPI Content Type:
+			application/json
 	*/
 
-	// @Title Get TimeZone
-	// @Description Return a TimeZone, given its id
-	// @Accept  json
-	//
-	// @Param   x-ems-consumer	header	string  true	"Defines the consumer of the API. MobileApp, etc."
-	// @Param   x-ems-api-token	header	string	true	"Auth token, from /authenticate request"
-	// @Param   id				path	int     true	"TimeZone ID"
-	// @Param   timestamp      	query   string	true    "dateTime in timeZone local time, for which to get timezone info with offsets adjusted for DST, RFC3339"
-	//
-	// @Success 200 {object} model.TimeZoneModel "Success"
-	// @Failure 400 {object} apicommon.ErrorResponse "Bad Request"
-	// @Failure 401 {object} apicommon.ErrorResponse "Invalid or missing consumer credentials"
-	// @Router /timezones/{id} [get]
+	var operationIntermediate OperationIntermediate = OperationIntermediate{
+		Accepts:    make([]string, 0),
+		Parameters: make([]ParameterIntermediate, 0),
+		Responses:  make([]*ResponseIntermediate, 0),
+	}
+
+	sections := parseSections(commentBlock)
+
+	for _, section := range sections {
+		title := strings.TrimSpace(section.Title)
+		title = strings.ToLower(title)
+
+		switch title {
+		case "openapi summary":
+			if l, ok := section.Line(0); ok {
+				operationIntermediate.Summary = l
+			}
+		case "openapi path":
+			if l, ok := section.Line(0); ok {
+				operationIntermediate.Path = l
+			}
+		case "openapi method":
+			if l, ok := section.Line(0); ok {
+				operationIntermediate.Method = l
+			}
+		case "openapi query string parameters":
+
+		case "openapi request body":
+		case "openapi responses":
+		case "openapi description":
+		case "openapi tags":
+		case "openapi content type":
+		}
+	}
 
 	var (
 		// At the time of writing, IntelliJ erroneously warns on unnecessary
@@ -124,12 +154,6 @@ func intermediatateOperation(commentBlock string) OperationIntermediate {
 		rxRouter      *regexp.Regexp = regexp.MustCompile(`@Router\s+([/\w\d-{}]+)\s+\[(\w+)\]`)
 		rxTitle       *regexp.Regexp = regexp.MustCompile(`@Title\s+(.+)`)
 	)
-
-	var operationIntermediate OperationIntermediate = OperationIntermediate{
-		Accepts:    make([]string, 0),
-		Parameters: make([]ParameterIntermediate, 0),
-		Responses:  make([]*ResponseIntermediate, 0),
-	}
 
 	b := bytes.NewBufferString(commentBlock)
 	scanner := bufio.NewScanner(b)
@@ -223,7 +247,7 @@ func intermediatateOperation(commentBlock string) OperationIntermediate {
 			operationIntermediate.Method = matches[2]
 
 		case rxTitle.MatchString(line):
-			operationIntermediate.Title = rxTitle.FindStringSubmatch(line)[1]
+			operationIntermediate.Summary = rxTitle.FindStringSubmatch(line)[1]
 
 		default:
 
@@ -233,4 +257,58 @@ func intermediatateOperation(commentBlock string) OperationIntermediate {
 	}
 
 	return operationIntermediate
+}
+
+func parseQueryStringParams(section Section) []ParameterIntermediate {
+
+	/*
+		OpenAPI Query String Parameters:
+		world  string  required  World UUID
+		user   string  optional  User UUID
+		x      int     optional  X-coordinate for blind query
+		y      int     optional  Y-coordinate for blind query
+		w      int     optional  Width of query area
+		h      int     optional  Height of query area
+	*/
+
+	var (
+		out []ParameterIntermediate = make([]ParameterIntermediate, 0)
+		rx  *regexp.Regexp          = regexp.MustCompile(`([\w-]+)\s+(\w+)\s+([\w\.]+)\s+(.+)`)
+	)
+
+	// This is probably the ugliest loop I have ever written in my life.
+	for i := 0; true; i++ {
+		l, ok := section.Line(i)
+		if !ok {
+			break
+		}
+
+		matches := rx.FindStringSubmatch(l)
+		if matches == nil {
+			// no match
+			continue
+		}
+
+		parameterType := &MemberIntermediate{
+			Type:     matches[2],
+			JsonName: matches[1],
+		}
+
+		desc := matches[4]
+		desc = strings.TrimSpace(desc)
+		if strings.HasPrefix(desc, "\"") {
+			strings.Trim("desc", "\"")
+		}
+
+		var parameterIntermediate ParameterIntermediate = ParameterIntermediate{
+			Description: matches[4],
+			In:          "query", // Always a query string parameter here.
+			Required:    strings.ToLower(matches[3]) == "required",
+			Type:        parameterType,
+		}
+
+		out = append(out, parameterIntermediate)
+	}
+
+	return out
 }

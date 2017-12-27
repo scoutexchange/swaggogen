@@ -51,7 +51,7 @@ func swaggerizeOperations(intermediates []OperationIntermediate) map[string]spec
 
 		operationObject := &spec.Operation{
 			OperationProps: spec.OperationProps{
-				Summary:     operationIntermediate.Title,
+				Summary:     operationIntermediate.Summary,
 				Description: operationIntermediate.Description,
 				Consumes:    operationIntermediate.Accepts,
 				Produces:    operationIntermediate.Accepts,

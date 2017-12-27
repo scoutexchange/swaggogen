@@ -12,6 +12,20 @@ type Section struct {
 	Body  string
 }
 
+// This method returns the line in the body denoted by 'i'.
+// Lines are sections of the string delimited by newlines.
+// If the line does not exist, the boolean is returned as false.
+func (this Section) Line(i int) (string, bool) {
+	lines := strings.Split(this.Body, "\n")
+	if i >= len(lines) {
+		return "", false
+	}
+
+	line := strings.TrimSpace(lines[i])
+
+	return line, true
+}
+
 func (this Section) String() string {
 	b := bytes.NewBuffer(nil)
 	fmt.Fprintln(b, this.Title+":")
@@ -64,7 +78,6 @@ func parseSections(commentBlock string) []Section {
 }
 
 func cleanupSection(section Section) Section {
-	var out Section
 
 	var (
 		spacesRemoved bool = true // gotta get the loop going.
@@ -84,6 +97,7 @@ func cleanupSection(section Section) Section {
 		section.Body = body
 	}
 
+	return section
 }
 
 func trimPrefixMultiline(s string, prefix string) string {
