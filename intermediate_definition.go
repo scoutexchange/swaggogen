@@ -125,3 +125,14 @@ func (this *DefinitionIntermediate) DefineDefinitions() error {
 
 	return nil
 }
+
+
+
+func mergeDefinitions(dst, src *DefinitionIntermediate) {
+	for srcName, srcMember := range src.Members {
+		_, exists := dst.Members[srcName]
+		if !exists {
+			dst.Members[srcName] = srcMember
+		}
+	}
+}

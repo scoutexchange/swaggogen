@@ -9,19 +9,6 @@ import (
 	"strings"
 )
 
-type ApiIntermediate struct {
-	ApiVersion     string
-	ApiTitle       string
-	ApiDescription string
-	BasePath       string
-	SubApis        []SubApiIntermediate
-}
-
-type SubApiIntermediate struct {
-	Name string
-	Path string
-}
-
 // This is an intermediate representation of a path and/or operation as parsed
 // in the comments. A collection of these can be combined and transformed to
 // create the swagger hierarchy.
@@ -63,61 +50,55 @@ func (this *ResponseIntermediate) Schema() *spec.Schema {
 	return schema
 }
 
-func intermediatateApi(commentBlocks []string) ApiIntermediate {
-
-	// @APIVersion 1.0.0
-	// @APITitle REST API
-	// @APIDescription EMS Rest API
-	// @BasePath /api/v1
-	// @SubApi HealthCheck [/health]
-
-	var (
-		// At the time of writing, IntelliJ erroneously warns on unnecessary
-		// escape sequences. Do not trust IntelliJ.
-		rxApiVersion     *regexp.Regexp = regexp.MustCompile(`@APIVersion\s+([\d\.]+)`)
-		rxApiTitle       *regexp.Regexp = regexp.MustCompile(`@APITitle\s+(.+)`)
-		rxApiDescription *regexp.Regexp = regexp.MustCompile(`@APIDescription\s+(.+)`)
-		rxBasePath       *regexp.Regexp = regexp.MustCompile(`@BasePath\s+([/a-zA-Z0-9-]+)`)
-		rxSubApi         *regexp.Regexp = regexp.MustCompile(`@SubApi\s+([0-9a-zA-Z]+)\s+\[([/a-zA-Z0-9-]+)\]`)
-	)
-
-	var apiIntermediate ApiIntermediate = ApiIntermediate{
-		SubApis: make([]SubApiIntermediate, 0),
-	}
-
-	for _, commentBlock := range commentBlocks {
-
-		b := bytes.NewBufferString(commentBlock)
-		scanner := bufio.NewScanner(b)
-		for scanner.Scan() {
-			line := scanner.Text()
-
-			switch {
-
-			case rxApiDescription.MatchString(line):
-				apiIntermediate.ApiDescription = rxApiDescription.FindStringSubmatch(line)[1]
-			case rxApiTitle.MatchString(line):
-				apiIntermediate.ApiTitle = rxApiTitle.FindStringSubmatch(line)[1]
-			case rxApiVersion.MatchString(line):
-				apiIntermediate.ApiVersion = rxApiVersion.FindStringSubmatch(line)[1]
-			case rxBasePath.MatchString(line):
-				apiIntermediate.BasePath = rxBasePath.FindStringSubmatch(line)[1]
-
-			case rxSubApi.MatchString(line):
-				matches := rxSubApi.FindStringSubmatch(line)
-				subApi := SubApiIntermediate{
-					Name: matches[1],
-					Path: matches[2],
-				}
-				apiIntermediate.SubApis = append(apiIntermediate.SubApis, subApi)
-			}
-		}
-	}
-
-	return apiIntermediate
-}
-
+// This function does not do type detection. It merely scrapes what information
+// there is in the comment block.
 func intermediatateOperation(commentBlock string) OperationIntermediate {
+
+	/*
+		OpenAPI Path:
+			/api/villages
+
+		OpenAPI Method:
+			GET
+
+		OpenAPI Query String Parameters:
+			world  string  required  World UUID
+			user   string  optional  User UUID
+			x      int     optional  X-coordinate for blind query
+			y      int     optional  Y-coordinate for blind query
+			w      int     optional  Width of query area
+			h      int     optional  Height of query area
+
+		OpenAPI Request Body:
+			nil
+
+		OpenAPI Response Body:
+			[]types.Village
+
+		OpenAPI Description:
+			This endpoint returns all of the villages that belong to the user and world
+			specified by the query string parameter.
+
+			The `world` parameter is required in all uses.
+
+			The `user` parameter returns all villages owned by that user. If the calling
+			player has permission to view all village information, then that information
+			will be returned. Otherwise, only a subset of village information is
+			returned. Use of this parameter is the recommended way to get the calling
+			user's villages. Use of this parameter takes precedence over the use of the
+			`x`, `y`, `w`, and `h` parameters.
+
+			Similar to the tiles endpoint (`/api/tiles [GET]`), the `x`, `y`, `w`, and
+			`h` parameters control the retrieval of all the villages in a specific area
+			of the map. Unless specified, the values for these parameters are assumed to
+			be zero. If `w` and `h` are zero, then only one village is returned (if it
+			exists at the coordinates provided). The maximum values accepted for `w` and
+			`h` will be 1000, and values exceeding 1000 will be quietly accepted as
+			1000.
+
+			In all circumstances, a set (array) is returned regardless of the quantity
+			of villages returned.
+	*/
 
 	// @Title Get TimeZone
 	// @Description Return a TimeZone, given its id
@@ -252,29 +233,4 @@ func intermediatateOperation(commentBlock string) OperationIntermediate {
 	}
 
 	return operationIntermediate
-}
-
-func mergeDefinitions(dst, src *DefinitionIntermediate) {
-	for srcName, srcMember := range src.Members {
-		_, exists := dst.Members[srcName]
-		if !exists {
-			dst.Members[srcName] = srcMember
-		}
-	}
-}
-
-func tagOperations(apiIntermediate ApiIntermediate, operationIntermediates []OperationIntermediate) []OperationIntermediate {
-	newOperationIntermediates := make([]OperationIntermediate, 0)
-
-	for _, operationIntermediate := range operationIntermediates {
-		for _, subApi := range apiIntermediate.SubApis {
-			if strings.HasPrefix(operationIntermediate.Path, subApi.Path) {
-				operationIntermediate.Tag = subApi.Name
-				break
-			}
-		}
-		newOperationIntermediates = append(newOperationIntermediates, operationIntermediate)
-	}
-
-	return newOperationIntermediates
 }

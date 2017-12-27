@@ -88,30 +88,53 @@ func main() {
 	}
 
 	// Now, let's check all of the comment blocks we found for tags, parsing them as necessary.
-	apiCommentBlocks := make([]string, 0)
-	for _, commentBlocks := range packageCommentBlocks {
-		newApiComments := detectApiCommentBlocks(commentBlocks){
-			apiCommentBlocks = append(apiCommentBlocks, newApiComments...)
-		}
-	}
-	apiIntermediate := intermediatateApi(apiCommentBlocks)
+	var (
+		apiCommentBlocks       []string            = make([]string, 0)
+		operationCommentBlocks map[string][]string = make(map[string][]string, 0)
+		tagCommentBlocks       []string            = make([]string, 0)
+	)
 
-	// We need to know the package so we know where to look for the types.
-	operationPkgComments := make(map[string][]string)
-	for importPath, comments := range packageCommentBlocks {
-		operationPkgComments[importPath] = hasPathComments(comments)
+	for importPath, commentBlocks := range packageCommentBlocks {
+		newApiCommentBlocks := detectApiCommentBlocks(commentBlocks)
+		apiCommentBlocks = append(apiCommentBlocks, newApiCommentBlocks...)
+
+		newOperationCommentBlocks := detectOperationComments(commentBlocks)
+		// We need to know the package so we know where to look for the types.
+		operationCommentBlocks[importPath] = newOperationCommentBlocks
+
+		newTagCommentBlocks := detectOperationComments(commentBlocks)
+		tagCommentBlocks = append(tagCommentBlocks, newTagCommentBlocks...)
 	}
 
-	operationIntermediates := make([]OperationIntermediate, 0)
-	for importPath, commentBlocks := range operationPkgComments {
+	// Let's turn our detected comments into our internal, intermediate types.
+
+	var (
+		apiIntermediate        ApiIntermediate         // There's only one.
+		operationIntermediates []OperationIntermediate = make([]OperationIntermediate, 0)
+		tagIntermediates       []TagIntermediate       = make([]TagIntermediate, 0)
+	)
+
+	// This function takes all API comment blocks, as they should all condense into a single API description.
+	apiIntermediate = intermediatateApi(apiCommentBlocks)
+
+	for importPath, commentBlocks := range operationCommentBlocks {
 		for _, commentBlock := range commentBlocks {
+
+			// This only scrapes the information found in the comment block.
+			// It doesn't do any further processing.
 			operationIntermediate := intermediatateOperation(commentBlock)
+
+			// We need this for later.
 			operationIntermediate.PackagePath = importPath
+
 			operationIntermediates = append(operationIntermediates, operationIntermediate)
 		}
 	}
 
-	operationIntermediates = tagOperations(apiIntermediate, operationIntermediates)
+	for _, commentBlock := range tagCommentBlocks {
+		newTagIntermediates := intermediatateTags(commentBlock)
+		tagIntermediates = append(tagIntermediates, newTagIntermediates...)
+	}
 
 	err = deriveDefinitionsFromOperations(operationIntermediates)
 	if err != nil {

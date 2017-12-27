@@ -67,7 +67,7 @@ func (this *CommentVisitor) Visit(node ast.Node) (w ast.Visitor) {
 
 // This is used to detect blocks with 'OpenAPI Path:'. A comment block that describes a path/operation is useless if it
 // fails to describe the path. Therefore, this is a good indicator.
-func hasPathComments(commentBlocks []string) []string {
+func detectOperationComments(commentBlocks []string) []string {
 	return detectComments(commentBlocks, "OpenAPI Path:")
 }
 
