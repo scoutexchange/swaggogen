@@ -79,6 +79,7 @@ func main() {
 	// Find all comments that could conceivably have our tags in them.
 	packageCommentBlocks := make(map[string][]string, 0)
 	for importPath := range pkgInfos {
+		//log.Print("Scanning package for comments: ", importPath)
 		newBlocks, err := getCommentBlocks(importPath)
 		if err != nil {
 			log.Fatal(errors.Stack(err))
@@ -96,6 +97,9 @@ func main() {
 
 	for importPath, commentBlocks := range packageCommentBlocks {
 		newApiCommentBlocks := detectApiCommentBlocks(commentBlocks)
+
+		//jlog.Log(newApiCommentBlocks)
+
 		apiCommentBlocks = append(apiCommentBlocks, newApiCommentBlocks...)
 
 		newOperationCommentBlocks := detectOperationComments(commentBlocks)
@@ -136,6 +140,8 @@ func main() {
 		tagIntermediates = append(tagIntermediates, newTagIntermediates...)
 	}
 
+	// I really don't like the way this is done.
+	// TODO: Make this more functional.
 	err = deriveDefinitionsFromOperations(operationIntermediates)
 	if err != nil {
 		log.Fatal(errors.Stack(err))
@@ -143,15 +149,11 @@ func main() {
 
 	// Transform the extractions above and combine them into a single Swagger Spec.
 
-	swagger := swaggerizeApi(apiIntermediate)
-	pathItems := swaggerizeOperations(operationIntermediates)
-	definitions := swaggerizeDefinitions()
+	var swagger *spec.Swagger = swaggerizeApi(apiIntermediate)
 
-	swagger.Paths = &spec.Paths{
-		Paths: pathItems,
-	}
-
-	swagger.Definitions = definitions
+	swagger.Paths = swaggerizeOperations(operationIntermediates)
+	swagger.Tags = swaggerizeTags(tagIntermediates)
+	swagger.Definitions = swaggerizeDefinitions()
 
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "\t")

@@ -14,16 +14,29 @@ type Section struct {
 
 // This method returns the line in the body denoted by 'i'.
 // Lines are sections of the string delimited by newlines.
+// Empty lines are excluded from the set of lines.
 // If the line does not exist, the boolean is returned as false.
 func (this Section) Line(i int) (string, bool) {
-	lines := strings.Split(this.Body, "\n")
+	lines := this.Lines()
 	if i >= len(lines) {
 		return "", false
 	}
 
-	line := strings.TrimSpace(lines[i])
+	return lines[i], true
+}
 
-	return line, true
+func (this Section) Lines() []string {
+	in := strings.Split(this.Body, "\n")
+	out := make([]string, 0)
+
+	for _, line := range in {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			out = append(out, line)
+		}
+	}
+
+	return out
 }
 
 func (this Section) String() string {
@@ -72,6 +85,12 @@ func parseSections(commentBlock string) []Section {
 		} else {
 			fmt.Fprintln(body, line)
 		}
+	}
+
+	// capture the last section.
+	if section != nil {
+		section.Body = body.String()
+		sections = append(sections, cleanupSection(*section))
 	}
 
 	return sections

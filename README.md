@@ -420,8 +420,8 @@ OpenAPI Tags:
 
 # Code Structure
 
-This tool operates, at least conceptually, in three phases: parsing, extraction,
-and generation.
+This tool operates, at least conceptually, in three phases: detection,
+extraction, and generation.
 
 During the parsing phase, the code project is scanned for comments blocks.
 

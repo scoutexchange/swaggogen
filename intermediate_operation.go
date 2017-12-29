@@ -1,9 +1,8 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"github.com/go-openapi/spec"
+	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -21,7 +20,7 @@ type OperationIntermediate struct {
 	Path        string
 	Responses   []*ResponseIntermediate
 	Summary     string
-	Tag         string
+	Tags        []string
 }
 
 type ParameterIntermediate struct {
@@ -45,7 +44,10 @@ type ResponseIntermediate struct {
 func (this *ResponseIntermediate) Schema() *spec.Schema {
 
 	schema := this.Type.Schema()
-	schema.Title = ""
+
+	if schema != nil {
+		schema.Title = ""
+	}
 
 	return schema
 }
@@ -109,13 +111,16 @@ func intermediatateOperation(commentBlock string) OperationIntermediate {
 			application/json
 	*/
 
-	var operationIntermediate OperationIntermediate = OperationIntermediate{
+	var oi OperationIntermediate = OperationIntermediate{
 		Accepts:    make([]string, 0),
 		Parameters: make([]ParameterIntermediate, 0),
 		Responses:  make([]*ResponseIntermediate, 0),
+		Tags:       make([]string, 0),
 	}
 
 	sections := parseSections(commentBlock)
+
+	//log.Print("\n",commentBlock)
 
 	for _, section := range sections {
 		title := strings.TrimSpace(section.Title)
@@ -124,142 +129,97 @@ func intermediatateOperation(commentBlock string) OperationIntermediate {
 		switch title {
 		case "openapi summary":
 			if l, ok := section.Line(0); ok {
-				operationIntermediate.Summary = l
+				oi.Summary = l
 			}
 		case "openapi path":
 			if l, ok := section.Line(0); ok {
-				operationIntermediate.Path = l
+				oi.Path = l
 			}
 		case "openapi method":
 			if l, ok := section.Line(0); ok {
-				operationIntermediate.Method = l
+				oi.Method = l
 			}
 		case "openapi query string parameters":
-
+			oi.Parameters = append(oi.Parameters, parseQueryStringParams(section)...)
+		case "openapi path parameters":
+			oi.Parameters = append(oi.Parameters, parsePathParams(section)...)
 		case "openapi request body":
+			l, ok := section.Line(0)
+			if !ok {
+				continue
+			}
+
+			bodyType := getFirstWord(l)
+			if bodyType == "nil" {
+				continue
+			}
+
+			bodyParam := ParameterIntermediate{
+				In:          "body",
+				Required:    true,
+				Description: "",
+				Type:        &MemberIntermediate{Type: bodyType},
+			}
+
+			oi.Parameters = append(oi.Parameters, bodyParam)
+
 		case "openapi responses":
+			oi.Responses = parseResponses(section)
 		case "openapi description":
+			oi.Description = section.Body
 		case "openapi tags":
-		case "openapi content type":
-		}
-	}
+			for _, l := range section.Lines() {
+				l = getFirstWord(l)
 
-	var (
-		// At the time of writing, IntelliJ erroneously warns on unnecessary
-		// escape sequences. Do not trust IntelliJ.
-		rxAccept      *regexp.Regexp = regexp.MustCompile(`@Accept\s+(.+)`)
-		rxDescription *regexp.Regexp = regexp.MustCompile(`@Description\s+(.+)`)
-		rxParameter   *regexp.Regexp = regexp.MustCompile(`@Param\s+([\w-]+)\s+(\w+)\s+([\w\.]+)\s+(\w+)\s+\"(.+)\"`)
-		rxResponse    *regexp.Regexp = regexp.MustCompile(`@(Success|Failure)\s+(\d+)\s+\{([\w]+)\}\s+([\w\.]+)\s+\"(.+)\"`)
-		rxRouter      *regexp.Regexp = regexp.MustCompile(`@Router\s+([/\w\d-{}]+)\s+\[(\w+)\]`)
-		rxTitle       *regexp.Regexp = regexp.MustCompile(`@Title\s+(.+)`)
-	)
-
-	b := bytes.NewBufferString(commentBlock)
-	scanner := bufio.NewScanner(b)
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		switch {
-
-		case rxAccept.MatchString(line):
-
-			raw := rxAccept.FindStringSubmatch(line)[1]
-			accepts := strings.Split(raw, ",")
-			for _, accept := range accepts {
-				accept = strings.TrimSpace(accept)
-				accept = strings.ToLower(accept)
-
-				if accept == "" {
+				if l == "" {
 					continue
-				} else if accept == "json" {
-					accept = "application/json"
-				} else if accept == "xml" {
-					accept = "application/xml"
-				}
-
-				operationIntermediate.Accepts = append(operationIntermediate.Accepts, accept)
-			}
-
-		case rxDescription.MatchString(line):
-			operationIntermediate.Description = rxDescription.FindStringSubmatch(line)[1]
-		case rxParameter.MatchString(line):
-
-			matches := rxParameter.FindStringSubmatch(line)
-
-			parameterType := &MemberIntermediate{
-				Type:     matches[3],
-				JsonName: matches[1],
-			}
-
-			parameterIntermediate := ParameterIntermediate{
-				In:          matches[2],
-				Type:        parameterType,
-				Required:    strings.ToLower(matches[4]) == "true",
-				Description: matches[5],
-			}
-
-			operationIntermediate.Parameters = append(operationIntermediate.Parameters, parameterIntermediate)
-
-		case rxResponse.MatchString(line):
-
-			matches := rxResponse.FindStringSubmatch(line)
-			statusCode, _ := strconv.Atoi(matches[2])
-
-			goType := matches[4]
-			goTypeMeta := matches[3]
-			if strings.ToLower(goTypeMeta) == "array" && !strings.HasPrefix(goType, "[]") {
-				goType = "[]" + goType
-			}
-
-			var responseType SchemerDefiner
-
-			if isSlice, v := IsSlice(goType); isSlice {
-				valueType := &MemberIntermediate{
-					Type:        v,
-					Validations: make(ValidationMap),
-				}
-
-				responseType = &SliceIntermediate{
-					Type:        goType,
-					ValueType:   valueType,
-					Validations: make(ValidationMap),
-				}
-			} else {
-				responseType = &MemberIntermediate{
-					Type:        goType,
-					Validations: make(ValidationMap),
+				} else {
+					oi.Tags = append(oi.Tags, l)
 				}
 			}
+		case "openapi content type":
+			for _, l := range section.Lines() {
+				l = getFirstWord(l)
+				l = strings.ToLower(l)
 
-			responseIntermediate := &ResponseIntermediate{
-				Success:     strings.ToLower(matches[1]) == "success",
-				StatusCode:  statusCode,
-				Type:        responseType,
-				Description: matches[5],
+				if l == "" {
+					continue
+				} else if strings.Contains(l, "json") {
+					l = "application/json"
+				} else if strings.Contains(l, "xml") {
+					l = "application/xml"
+				}
 			}
-
-			operationIntermediate.Responses = append(operationIntermediate.Responses, responseIntermediate)
-
-		case rxRouter.MatchString(line):
-			matches := rxRouter.FindStringSubmatch(line)
-			operationIntermediate.Path = matches[1]
-			operationIntermediate.Method = matches[2]
-
-		case rxTitle.MatchString(line):
-			operationIntermediate.Summary = rxTitle.FindStringSubmatch(line)[1]
-
 		default:
-
-			//log.Print(line)
-
+			log.Print("Unrecognized section:\n", section)
 		}
 	}
 
-	return operationIntermediate
+	return oi
+}
+
+func parsePathParams(section Section) []ParameterIntermediate {
+	var params []ParameterIntermediate = parseParams(section)
+
+	for i := range params {
+		params[i].In = "path"
+	}
+
+	return params
+
 }
 
 func parseQueryStringParams(section Section) []ParameterIntermediate {
+	var params []ParameterIntermediate = parseParams(section)
+
+	for i := range params {
+		params[i].In = "query"
+	}
+
+	return params
+}
+
+func parseParams(section Section) []ParameterIntermediate {
 
 	/*
 		OpenAPI Query String Parameters:
@@ -273,15 +233,11 @@ func parseQueryStringParams(section Section) []ParameterIntermediate {
 
 	var (
 		out []ParameterIntermediate = make([]ParameterIntermediate, 0)
-		rx  *regexp.Regexp          = regexp.MustCompile(`([\w-]+)\s+(\w+)\s+([\w\.]+)\s+(.+)`)
+		rx  *regexp.Regexp          = regexp.MustCompile(`(\S+)\s+(\w+)\s+(\w+)\s+(.+)`)
 	)
 
 	// This is probably the ugliest loop I have ever written in my life.
-	for i := 0; true; i++ {
-		l, ok := section.Line(i)
-		if !ok {
-			break
-		}
+	for _, l := range section.Lines() {
 
 		matches := rx.FindStringSubmatch(l)
 		if matches == nil {
@@ -289,7 +245,7 @@ func parseQueryStringParams(section Section) []ParameterIntermediate {
 			continue
 		}
 
-		parameterType := &MemberIntermediate{
+		paramType := &MemberIntermediate{
 			Type:     matches[2],
 			JsonName: matches[1],
 		}
@@ -302,12 +258,71 @@ func parseQueryStringParams(section Section) []ParameterIntermediate {
 
 		var parameterIntermediate ParameterIntermediate = ParameterIntermediate{
 			Description: matches[4],
-			In:          "query", // Always a query string parameter here.
+			In:          "", // This should get set by the caller.
 			Required:    strings.ToLower(matches[3]) == "required",
-			Type:        parameterType,
+			Type:        paramType,
 		}
 
 		out = append(out, parameterIntermediate)
+	}
+
+	return out
+}
+
+func parseResponses(section Section) []*ResponseIntermediate {
+
+	/*
+		OpenAPI Responses:
+			200	[]types.Village	List of villages
+	*/
+
+	var (
+		out []*ResponseIntermediate = make([]*ResponseIntermediate, 0)
+		rx  *regexp.Regexp          = regexp.MustCompile(`(\d+)\s+(\S+)\s+(.+)`)
+	)
+
+	// This is probably the ugliest loop I have ever written in my life.
+	for _, l := range section.Lines() {
+
+		matches := rx.FindStringSubmatch(l)
+		if matches == nil {
+			// no match
+			log.Print("No match for response:", l)
+			continue
+		}
+
+		goType := matches[2]
+
+		var responseType SchemerDefiner
+
+		if isSlice, v := IsSlice(goType); isSlice {
+			valueType := &MemberIntermediate{
+				Type:        v,
+				Validations: make(ValidationMap),
+			}
+
+			responseType = &SliceIntermediate{
+				Type:        goType,
+				ValueType:   valueType,
+				Validations: make(ValidationMap),
+			}
+		} else {
+			responseType = &MemberIntermediate{
+				Type:        goType,
+				Validations: make(ValidationMap),
+			}
+		}
+
+		statusCode, _ := strconv.Atoi(matches[1])
+
+		ri := &ResponseIntermediate{
+			Success:     strings.ToLower(matches[1]) == "success",
+			StatusCode:  statusCode,
+			Type:        responseType,
+			Description: matches[3],
+		}
+
+		out = append(out, ri)
 	}
 
 	return out

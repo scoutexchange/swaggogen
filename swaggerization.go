@@ -39,7 +39,8 @@ See the following for reference:
 	https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md
 	https://godoc.org/github.com/go-openapi/spec
 */
-func swaggerizeOperations(intermediates []OperationIntermediate) map[string]spec.PathItem {
+func swaggerizeOperations(intermediates []OperationIntermediate) *spec.Paths {
+
 	pathItems := make(map[string]spec.PathItem)
 
 	for _, operationIntermediate := range intermediates {
@@ -55,7 +56,7 @@ func swaggerizeOperations(intermediates []OperationIntermediate) map[string]spec
 				Description: operationIntermediate.Description,
 				Consumes:    operationIntermediate.Accepts,
 				Produces:    operationIntermediate.Accepts,
-				Tags:        []string{operationIntermediate.Tag},
+				Tags:        operationIntermediate.Tags,
 			},
 		}
 
@@ -106,7 +107,9 @@ func swaggerizeOperations(intermediates []OperationIntermediate) map[string]spec
 		pathItems[operationIntermediate.Path] = pathItem
 	}
 
-	return pathItems
+	paths := &spec.Paths{Paths: pathItems}
+
+	return paths
 }
 
 func swaggerizeDefinitions() map[string]spec.Schema {
@@ -119,4 +122,22 @@ func swaggerizeDefinitions() map[string]spec.Schema {
 	}
 
 	return schemas
+}
+
+func swaggerizeTags(intermediates []TagIntermediate) []spec.Tag {
+
+	tags := make([]spec.Tag, 0)
+
+	for _, intermediate := range intermediates {
+		tag := spec.Tag{
+			TagProps: spec.TagProps{
+				Name:        intermediate.Name,
+				Description: intermediate.Description,
+			},
+		}
+
+		tags = append(tags, tag)
+	}
+
+	return tags
 }

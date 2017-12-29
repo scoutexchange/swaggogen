@@ -71,6 +71,12 @@ func (this *MemberIntermediate) CanonicalName() string {
 }
 
 func (this *MemberIntermediate) Schema() *spec.Schema {
+
+	// This addresses a response not having a type (no body).
+	if this.Type == "nil" {
+		return nil
+	}
+
 	schema := new(spec.Schema)
 
 	name := this.Name
@@ -81,6 +87,9 @@ func (this *MemberIntermediate) Schema() *spec.Schema {
 	schema.Description = this.Description
 
 	if isPrimitive, t, f := IsPrimitive(this.Type); isPrimitive {
+
+
+
 		schema.Typed(t, f)
 
 		if t == "string" {
@@ -160,7 +169,7 @@ func (this *MemberIntermediate) DefineDefinitions(referringPackage string) error
 
 	goType := this.Type
 
-	if goType == "nil"{
+	if goType == "nil" {
 		return nil
 	}
 

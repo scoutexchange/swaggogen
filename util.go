@@ -34,6 +34,8 @@ func IsPrimitive(goType string) (bool, string, string) {
 	goType = strings.Trim(goType, "*")
 
 	switch goType {
+	case "[]byte":
+		return true, "string", "binary"
 	case "bool":
 		return true, "boolean", ""
 	case "byte":
@@ -56,6 +58,8 @@ func IsPrimitive(goType string) (bool, string, string) {
 		return true, "integer", "int32"
 	case "int64":
 		return true, "integer", "int64"
+	case "interface{}":
+		return true, "object", ""
 	case "rune":
 		return true, "integer", ""
 	case "string":
@@ -72,15 +76,18 @@ func IsPrimitive(goType string) (bool, string, string) {
 		return true, "integer", ""
 	case "uintptr":
 		return true, "integer", ""
-	case "[]byte":
-		return true, "string", "binary"
-	case "interface{}":
-		return true, "object", ""
 
 	case "time.Time":
 		// This is a special case. While not strictly a primitive type, it's
 		// something we can all agree is as simple as it needs to be.
 		return true, "string", "date-time"
+
+	case "nil":
+		// This is also a special case. The swagger spec doesn't like nils/nulls.
+		// Consequently, we're reporting it as a primitive, but you should check
+		// for nil pretty much anywhere else.
+		return true, "", ""
+
 	}
 
 	return false, "", ""

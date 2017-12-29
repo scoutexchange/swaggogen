@@ -95,7 +95,7 @@ func getPackageInfo(pkgPath string) (string, map[string][]string, error) {
 	}
 
 	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, bpkg.Dir, nil, parser.AllErrors)
+	pkgs, err := parser.ParseDir(fset, bpkg.Dir, nil, parser.AllErrors|parser.ImportsOnly)
 	if err != nil {
 		return "", nil, errors.Stack(err)
 	}

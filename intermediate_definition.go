@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/go-openapi/spec"
 	"github.com/jackmanlabs/errors"
-	"strconv"
 	"strings"
 )
 
@@ -13,10 +12,10 @@ type DefinitionIntermediate struct {
 	EmbeddedTypes  []string
 	Members        map[string]SchemerDefiner // map[name]schemer
 	Name           string
-	PackageName    string   // The actual package name of this type.
-	PackagePath    string   // The actual package path of this type.
-	UnderlyingType string   // This isn't used right now. In our test codebase, non-struct types were never used.
-	Enums          []string // If the underlying type is a primitive type, it's assumed it's an enum type, these being the values.
+	PackageName    string        // The actual package name of this type.
+	PackagePath    string        // The actual package path of this type.
+	UnderlyingType string        // This isn't used right now. In our test codebase, non-struct types were never used.
+	Enums          []interface{} // If the underlying type is a primitive type, it's assumed it's an enum type, these being the values.
 
 	// While it may not strictly be equivalent from a language specification
 	// perspective, we're going to call a non-struct type with an underlying
@@ -55,21 +54,7 @@ func (this *DefinitionIntermediate) Schema() spec.Schema {
 
 	if isPrimitive, t, f := IsPrimitive(this.UnderlyingType); isPrimitive {
 		schema.Typed(t, f)
-		schema.Enum = make([]interface{}, 0)
-
-		for _, enum := range this.Enums {
-			if strings.HasPrefix(enum, "\"") {
-				schema.Enum = append(schema.Enum, strings.Trim(enum, "\""))
-			} else {
-				// store numerical enums as numbers, otherwise strings.
-				if f, err := strconv.ParseFloat(enum, 64); err == nil {
-					schema.Enum = append(schema.Enum, f)
-				} else {
-					enum = strings.Trim(enum, "\"")
-					schema.Enum = append(schema.Enum, enum)
-				}
-			}
-		}
+		schema.Enum = this.Enums
 	} else {
 		schema.Typed("object", "")
 		schema.Required = make([]string, 0)
@@ -125,8 +110,6 @@ func (this *DefinitionIntermediate) DefineDefinitions() error {
 
 	return nil
 }
-
-
 
 func mergeDefinitions(dst, src *DefinitionIntermediate) {
 	for srcName, srcMember := range src.Members {

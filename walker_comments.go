@@ -23,8 +23,12 @@ func getCommentBlocks(pkgPath string) ([]string, error) {
 		return nil, errors.Stack(err)
 	}
 
-	commentVisitor := &CommentVisitor{Fset: fset}
+	commentVisitor := &CommentVisitor{
+		Fset:     fset,
+		Comments: make([]string, 0),
+	}
 	for _, pkg := range pkgs {
+		//log.Print("Package name: ", pkg.Name)
 		ast.Walk(commentVisitor, pkg)
 	}
 
@@ -48,18 +52,31 @@ func (this *CommentVisitor) Visit(node ast.Node) (w ast.Visitor) {
 
 	switch t := node.(type) {
 
-	case *ast.CommentGroup:
-		if this.Comments == nil {
-			this.Comments = make([]string, 0)
-		}
+	//case *ast.CommentGroup:
+	//	this.Comments = append(this.Comments, t.Text())
+	//
+	//	return nil
 
-		this.Comments = append(this.Comments, t.Text())
+	case *ast.File:
+		// For some reason, file-level docs don't get detected with the CommentGroup filter.
+
+		//if t.Name.Name == "rest" {
+		//	ast.Fprint(os.Stderr, this.Fset, t, ast.NotNilFilter)
+		//}
+
+		for _, commentGroup := range t.Comments {
+			s := commentGroup.Text()
+			// We don't need all the comments, so let's save some memory/CPU.
+			if strings.Contains(s, "OpenAPI") {
+				this.Comments = append(this.Comments, s)
+			}
+		}
 
 		return nil
 
-		//case nil:
-		//default:
-		//	fmt.Printf("unexpected type %T\n", t) // %T prints whatever type t has
+	case nil:
+	default:
+		//log.Printf("unexpected type %T\n", t) // %T prints whatever type t has
 	}
 
 	return this
@@ -80,9 +97,8 @@ func detectApiCommentBlocks(commentBlocks []string) []string {
 // This detects comment blocks with 'OpenAPI Tag:'. There is no garantee that these tags declarations will be a part of
 // any other comment block.
 func detectTagComments(commentBlocks []string) []string {
-	return detectComments(commentBlocks, "OpenAPI Tag:")
+	return detectComments(commentBlocks, "OpenAPI Tags:")
 }
-
 
 // Comment detection is case-insensitive.
 // Any comment blocks that prove to have the test string will be returned.
