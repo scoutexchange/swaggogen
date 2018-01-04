@@ -201,3 +201,5 @@ func (this *MemberIntermediate) DefineDefinitions(referringPackage string) error
 
 	return nil
 }
+
+

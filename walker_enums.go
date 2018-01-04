@@ -94,7 +94,7 @@ func (this *EnumVisitor) Visit(node ast.Node) (w ast.Visitor) {
 		// the declarations could pertain to our type.
 
 		var (
-			//nam string = ""
+			nam string = ""
 			typ string = ""
 			val interface{}
 			iot int = 0
@@ -115,12 +115,6 @@ func (this *EnumVisitor) Visit(node ast.Node) (w ast.Visitor) {
 				continue
 			}
 
-			if len(valSpec.Names) != 1 {
-				log.Print("WARNING: A possible constant declaration was found, but has more than one name: " + typ)
-				continue
-			} else {
-				//nam = valSpec.Names[0].Name
-			}
 
 			if len(valSpec.Values) == 0 {
 				// Assume iota is in play.
@@ -137,6 +131,18 @@ func (this *EnumVisitor) Visit(node ast.Node) (w ast.Visitor) {
 					iot = 0
 				}
 			}
+
+			if len(valSpec.Names) != 1 {
+				log.Print("WARNING: A possible constant declaration was found, but has more than one name: " + typ)
+				continue
+			} else {
+				nam = valSpec.Names[0].Name
+			}
+
+			if nam == "_"{
+				continue
+			}
+
 
 			this.Values = append(this.Values, val)
 

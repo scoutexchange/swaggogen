@@ -26,7 +26,6 @@ var (
 	// were to pass these three things around, it would get very tedious very
 	// fast. This is not a multi-threaded program, and we've been careful to
 	// avoid modifying maps during iterations.
-	definitionStore DefinitionStore        = make(map[string]*DefinitionIntermediate)
 	pkgInfos        map[string]PackageInfo = make(map[string]PackageInfo)
 	srcPath         string
 	ignoredPackages []string = make([]string, 0)
@@ -139,6 +138,13 @@ func main() {
 		newTagIntermediates := intermediatateTags(commentBlock)
 		tagIntermediates = append(tagIntermediates, newTagIntermediates...)
 	}
+
+	var definitionStore DefinitionStore        = make(map[string]*DefinitionIntermediate)
+
+	for _, t := range operationIntermediates {
+
+	}
+
 
 	// I really don't like the way this is done.
 	// TODO: Make this more functional.

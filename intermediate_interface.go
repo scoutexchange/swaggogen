@@ -8,4 +8,5 @@ type SchemerDefiner interface {
 	DefineDefinitions(referencingPackagePath string) error
 	Schema() *spec.Schema
 	IsRequired() bool
+	GoType() string
 }
