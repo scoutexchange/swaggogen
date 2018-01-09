@@ -139,16 +139,11 @@ func main() {
 		tagIntermediates = append(tagIntermediates, newTagIntermediates...)
 	}
 
-	var definitionStore DefinitionStore        = make(map[string]*DefinitionIntermediate)
-
-	for _, t := range operationIntermediates {
-
-	}
 
 
 	// I really don't like the way this is done.
 	// TODO: Make this more functional.
-	err = deriveDefinitionsFromOperations(operationIntermediates)
+	defStore,err := deriveDefinitionsFromOperations(operationIntermediates)
 	if err != nil {
 		log.Fatal(errors.Stack(err))
 	}
@@ -159,7 +154,7 @@ func main() {
 
 	swagger.Paths = swaggerizeOperations(operationIntermediates)
 	swagger.Tags = swaggerizeTags(tagIntermediates)
-	swagger.Definitions = swaggerizeDefinitions()
+	swagger.Definitions = swaggerizeDefinitions(defStore)
 
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "\t")

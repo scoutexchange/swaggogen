@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/go-openapi/spec"
-	"github.com/jackmanlabs/errors"
 	"strconv"
 )
 
@@ -16,11 +15,27 @@ type MapIntermediate struct {
 	Description   string
 	Validations   Validator
 	Deprecated    bool
+	PackageName   string // Necessary for canonical and swagger names.
+	PackagePath   string
 }
 
 func (this *MapIntermediate) IsRequired() bool {
 	return this.Validations.IsRequired()
 }
+
+
+func (this *MapIntermediate) GoType() string {
+	return this.Type
+}
+
+func (this *MapIntermediate) SetPackagePath(s string) {
+	this.PackagePath = s
+}
+
+func (this *MapIntermediate) SetPackageName(s string) {
+	this.PackageName = s
+}
+
 
 func (this *MapIntermediate) Schema() *spec.Schema {
 
@@ -82,17 +97,17 @@ func (this *MapIntermediate) Schema() *spec.Schema {
 	return schema
 }
 
-func (this *MapIntermediate) DefineDefinitions(referencingPackagePath string) error {
-
-	err := this.ValueType.DefineDefinitions(referencingPackagePath)
-	if err != nil {
-		return errors.Stack(err)
-	}
-
-	err = this.KeyType.DefineDefinitions(referencingPackagePath)
-	if err != nil {
-		return errors.Stack(err)
-	}
-
-	return nil
-}
+//func (this *MapIntermediate) DefineDefinitions(referencingPackagePath string) error {
+//
+//	err := this.ValueType.DefineDefinitions(referencingPackagePath)
+//	if err != nil {
+//		return errors.Stack(err)
+//	}
+//
+//	err = this.KeyType.DefineDefinitions(referencingPackagePath)
+//	if err != nil {
+//		return errors.Stack(err)
+//	}
+//
+//	return nil
+//}

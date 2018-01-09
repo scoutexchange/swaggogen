@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/go-openapi/spec"
-	"github.com/jackmanlabs/errors"
 	"strings"
 )
 
@@ -76,40 +75,40 @@ func (this *DefinitionIntermediate) Schema() spec.Schema {
 	return schema
 }
 
-func (this *DefinitionIntermediate) DefineDefinitions() error {
-
-	var err error
-	goType := this.Name
-	if isPrimitive, _, _ := IsPrimitive(goType); isPrimitive {
-		// This was never hit with our test code base.
-		return nil
-	}
-
-	for _, embeddedType := range this.EmbeddedTypes {
-		definition, ok := definitionStore.ExistsDefinition(this.PackagePath, embeddedType)
-		if !ok {
-			definition, err = findDefinition(this.PackagePath, embeddedType)
-			if err != nil {
-				return errors.Stack(err)
-			} else if definition == nil {
-				return errors.Newf("Failed to find definition for embedded member: %s:%s", goType, embeddedType)
-			}
-
-			definitionStore.Add(definition)
-		}
-
-		mergeDefinitions(this, definition)
-	}
-
-	for _, member := range this.Members {
-		err := member.DefineDefinitions(this.PackagePath)
-		if err != nil {
-			return errors.Stack(err)
-		}
-	}
-
-	return nil
-}
+//func (this *DefinitionIntermediate) DefineDefinitions() error {
+//
+//	var err error
+//	goType := this.Name
+//	if isPrimitive, _, _ := IsPrimitive(goType); isPrimitive {
+//		// This was never hit with our test code base.
+//		return nil
+//	}
+//
+//	for _, embeddedType := range this.EmbeddedTypes {
+//		definition, ok := definitionStore.ExistsDefinition(this.PackagePath, embeddedType)
+//		if !ok {
+//			definition, err = findDefinition(this.PackagePath, embeddedType)
+//			if err != nil {
+//				return errors.Stack(err)
+//			} else if definition == nil {
+//				return errors.Newf("Failed to find definition for embedded member: %s:%s", goType, embeddedType)
+//			}
+//
+//			definitionStore.Add(definition)
+//		}
+//
+//		mergeDefinitions(this, definition)
+//	}
+//
+//	for _, member := range this.Members {
+//		err := member.DefineDefinitions(this.PackagePath)
+//		if err != nil {
+//			return errors.Stack(err)
+//		}
+//	}
+//
+//	return nil
+//}
 
 func mergeDefinitions(dst, src *DefinitionIntermediate) {
 	for srcName, srcMember := range src.Members {

@@ -15,15 +15,17 @@ import (
 */
 type DefinitionStore map[string]*DefinitionIntermediate
 
-func (this DefinitionStore) Add(intermediate *DefinitionIntermediate) {
+func (this DefinitionStore) Add(intermediates ...*DefinitionIntermediate) {
 
-	_, ok := this[intermediate.CanonicalName()]
-	if ok {
-		//log.Print("duplicate detected: " + intermediate.CanonicalName())
-		//jlog.Log(this)
+	for _, intermediate:= range intermediates{
+		_, ok := this[intermediate.CanonicalName()]
+		if ok {
+			//log.Print("duplicate detected: " + intermediate.CanonicalName())
+			//jlog.Log(this)
+		}
+
+		this[intermediate.CanonicalName()] = intermediate
 	}
-
-	this[intermediate.CanonicalName()] = intermediate
 }
 
 func (this DefinitionStore) ExistsDefinition(referringPackage, typeName string) (*DefinitionIntermediate, bool) {

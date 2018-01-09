@@ -112,11 +112,11 @@ func swaggerizeOperations(intermediates []OperationIntermediate) *spec.Paths {
 	return paths
 }
 
-func swaggerizeDefinitions() map[string]spec.Schema {
+func swaggerizeDefinitions(store DefinitionStore) map[string]spec.Schema {
 
 	schemas := make(map[string]spec.Schema)
 
-	for _, definition := range definitionStore {
+	for _, definition := range store {
 		swaggerName := definition.SwaggerName()
 		schemas[swaggerName] = definition.Schema()
 	}

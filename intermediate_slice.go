@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/go-openapi/spec"
-	"github.com/jackmanlabs/errors"
 	"strconv"
 )
 
@@ -15,10 +14,24 @@ type SliceIntermediate struct {
 	Description   string
 	Validations   Validator
 	Deprecated    bool
+	PackageName   string // Necessary for canonical and swagger names.
+	PackagePath   string
 }
 
 func (this *SliceIntermediate) IsRequired() bool {
 	return this.Validations.IsRequired()
+}
+
+func (this *SliceIntermediate) GoType() string {
+	return this.Type
+}
+
+func (this *SliceIntermediate) SetPackagePath(s string) {
+	this.PackagePath = s
+}
+
+func (this *SliceIntermediate) SetPackageName(s string) {
+	this.PackageName = s
 }
 
 func (this *SliceIntermediate) Schema() *spec.Schema {
@@ -70,12 +83,12 @@ func (this *SliceIntermediate) Schema() *spec.Schema {
 	return schema
 }
 
-func (this *SliceIntermediate) DefineDefinitions(referencingPackagePath string) error {
-
-	err := this.ValueType.DefineDefinitions(referencingPackagePath)
-	if err != nil {
-		return errors.Stack(err)
-	}
-
-	return nil
-}
+//func (this *SliceIntermediate) DefineDefinitions(referencingPackagePath string) error {
+//
+//	err := this.ValueType.DefineDefinitions(referencingPackagePath)
+//	if err != nil {
+//		return errors.Stack(err)
+//	}
+//
+//	return nil
+//}

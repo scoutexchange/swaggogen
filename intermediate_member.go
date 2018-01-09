@@ -25,6 +25,18 @@ func (this *MemberIntermediate) IsRequired() bool {
 	return this.Validations.IsRequired()
 }
 
+func (this *MemberIntermediate) GoType() string {
+	return this.Type
+}
+
+func (this *MemberIntermediate) SetPackagePath(s string) {
+	this.PackagePath = s
+}
+
+func (this *MemberIntermediate) SetPackageName(s string) {
+	this.PackageName = s
+}
+
 func (this *MemberIntermediate) DefinitionRef() string {
 	return "#/definitions/" + this.SwaggerName()
 }
@@ -87,8 +99,6 @@ func (this *MemberIntermediate) Schema() *spec.Schema {
 	schema.Description = this.Description
 
 	if isPrimitive, t, f := IsPrimitive(this.Type); isPrimitive {
-
-
 
 		schema.Typed(t, f)
 
@@ -159,47 +169,45 @@ func (this *MemberIntermediate) Schema() *spec.Schema {
 	return schema
 }
 
-func (this *MemberIntermediate) DefineDefinitions(referringPackage string) error {
-
-	if referringPackage == "" {
-		return errors.New("Referencing Package Path is empty.")
-	}
-
-	var err error
-
-	goType := this.Type
-
-	if goType == "nil" {
-		return nil
-	}
-
-	if isPrimitive, _, _ := IsPrimitive(goType); isPrimitive {
-		return nil
-	}
-
-	var definition *DefinitionIntermediate
-	definition, ok := definitionStore.ExistsDefinition(referringPackage, goType)
-
-	if !ok {
-		definition, err = findDefinition(referringPackage, goType)
-		if err != nil {
-			return errors.Stack(err)
-		} else if definition == nil {
-			return errors.New("Failed to generate definition for type: " + goType)
-		}
-
-		definitionStore.Add(definition)
-	}
-
-	this.PackagePath = definition.PackagePath
-	this.PackageName = definition.PackageName
-
-	if !ok {
-		// This triggers the definition of all the members of the discovered type associated with the present member.
-		definition.DefineDefinitions()
-	}
-
-	return nil
-}
-
-
+//func (this *MemberIntermediate) DefineDefinitions(referringPackage string) error {
+//
+//	if referringPackage == "" {
+//		return errors.New("Referencing Package Path is empty.")
+//	}
+//
+//	var err error
+//
+//	goType := this.Type
+//
+//	if goType == "nil" {
+//		return nil
+//	}
+//
+//	if isPrimitive, _, _ := IsPrimitive(goType); isPrimitive {
+//		return nil
+//	}
+//
+//	var definition *DefinitionIntermediate
+//	definition, ok := definitionStore.ExistsDefinition(referringPackage, goType)
+//
+//	if !ok {
+//		definition, err = findDefinition(referringPackage, goType)
+//		if err != nil {
+//			return errors.Stack(err)
+//		} else if definition == nil {
+//			return errors.New("Failed to generate definition for type: " + goType)
+//		}
+//
+//		definitionStore.Add(definition)
+//	}
+//
+//	this.PackagePath = definition.PackagePath
+//	this.PackageName = definition.PackageName
+//
+//	if !ok {
+//		// This triggers the definition of all the members of the discovered type associated with the present member.
+//		definition.DefineDefinitions()
+//	}
+//
+//	return nil
+//}
