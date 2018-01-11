@@ -1,1 +1,1 @@
-* Andrew Roy Jackman (jackman@jackmanlabs.com)
+* Andrew Roy Jackman (ajackman@goscoutgo.com)
