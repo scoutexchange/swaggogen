@@ -73,8 +73,8 @@ func findDefinition(referringPackage, typeName string) (*DefinitionIntermediate,
 					}
 
 					definition.Enums = make([]interface{}, 0)
-					for _, v := range values{
-						definition.Enums = append(definition.Enums , v)
+					for _, v := range values {
+						definition.Enums = append(definition.Enums, v)
 					}
 
 				}

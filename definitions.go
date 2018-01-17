@@ -59,7 +59,7 @@ func deriveDefinitionsFromOperations(operationIntermediates []OperationIntermedi
 		if len(defs) > 0 {
 			moreFound = true
 			defStore.Add(defs...)
-		}else{
+		} else {
 			moreFound = false
 		}
 	}
@@ -70,7 +70,6 @@ func deriveDefinitionsFromOperations(operationIntermediates []OperationIntermedi
 // This is used to allow incremental building of the definition store.
 // Otherwise, we risk a lot of duplicate lookups.
 func findNextUnknownDefinition(defStore DefinitionStore) ([]*DefinitionIntermediate, error) {
-
 
 	for _, def := range defStore {
 
@@ -97,7 +96,6 @@ func findNextUnknownDefinition(defStore DefinitionStore) ([]*DefinitionIntermedi
 		}
 	}
 
-
 	return nil, nil
 }
 
@@ -112,7 +110,6 @@ func getDefinition(defStore DefinitionStore, referringPackage, goType string) ([
 	if referringPackage == "" {
 		return nil, errors.New("Referencing Package Path is empty.")
 	}
-
 
 	if goType == "nil" {
 		return nil, nil
@@ -142,11 +139,11 @@ func getDefinition(defStore DefinitionStore, referringPackage, goType string) ([
 			continue
 		}
 
-		_, err := findDefinition(referringPackage, goType)
+		def, err := findDefinition(referringPackage, goType)
 		if err != nil {
 			return defs, errors.Stack(err)
 		} else if def == nil {
-			return defs, errors.New("Failed to generate definition for type: " + goType)
+			return defs, errors.Newf("Failed to generate definition for type '%s' referenced in package '%s'", goType, referringPackage)
 		}
 
 		// Embedded types require special treatment. we need the definitions
@@ -156,9 +153,9 @@ func getDefinition(defStore DefinitionStore, referringPackage, goType string) ([
 		// Suggestion for enhancement: get the embedded types first, possibly in
 		// a separate store.
 		for _, embeddedType := range def.EmbeddedTypes {
-			def, ok := defStore.ExistsDefinition(def.PackagePath, embeddedType)
+			embeddedDef, ok := defStore.ExistsDefinition(def.PackagePath, embeddedType)
 			if !ok {
-				def, err = findDefinition(def.PackagePath, embeddedType)
+				embeddedDef, err = findDefinition(def.PackagePath, embeddedType)
 				if err != nil {
 					return nil, errors.Stack(err)
 				} else if def == nil {
@@ -166,7 +163,7 @@ func getDefinition(defStore DefinitionStore, referringPackage, goType string) ([
 				}
 			}
 
-			mergeDefinitions(def, def)
+			mergeDefinitions(def, embeddedDef)
 		}
 
 		defs = append(defs, def)
