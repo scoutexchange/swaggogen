@@ -432,11 +432,6 @@ nothing else. Other Intermediates, such as the DefinitionIntermediate, require
 further analysis of the code, pulling struct definitions, enums, and so on from
 the code to create Swagger type definitions in the generation stage.
 
-The DefinitionIntermediates are special because they're store in a global
-dictionary, called DefinitionStore, and can be referenced by any of the
-extraction processes. This is primarily to improve performance and make certain
-sections of code simpler.
-
 Finally, in the generation phase, the Intermediates have been fully populated,
 and the swagger object tree is generated. Many Intermediates have a Schema()
 method so that they can generate their own schema by way of interface.
@@ -445,12 +440,17 @@ method so that they can generate their own schema by way of interface.
 
 This tool was written blind with respect to other similar tools.
 
-While this tool is intended to utilize the same annotations as the
-[yvasiyarov project](http://github.com/yvasiyarov/swagger), the original parsing
-algorithms were not copied (or even used as reference). Therefore, exact parsing
-behavior is not expected to be the same.
+While this tool was originally intended to utilize the same annotations as the
+[yvasiyarov project](http://github.com/yvasiyarov/swagger). The development of 
+that code was sponsored by [EMS Software](https://www.emssoftware.com),
+developed by Andrew Roy Jackman, and made public under the MIT license under the
+direction of the VP of Engineering.
+
+The latest mode of operation, utilizing Godoc-compatible comments, is made
+possible with development sponsored by
+[Scout Exchange](http://www.goscoutgo.com).
 
 Also, the availability of the
 [OpenAPI specification models](http://github.com/go-openapi/spec) from the
-[OpenAPI Initiative golang toolkit](https://github.com/go-openapi) library is
-greatly appreciated.
+[OpenAPI Initiative golang toolkit](https://github.com/go-openapi) library, on
+which this project depends, is greatly appreciated.

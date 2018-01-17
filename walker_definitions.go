@@ -76,7 +76,6 @@ func findDefinition(referringPackage, typeName string) (*DefinitionIntermediate,
 					for _, v := range values {
 						definition.Enums = append(definition.Enums, v)
 					}
-
 				}
 
 				return definition, nil

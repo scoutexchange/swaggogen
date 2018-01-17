@@ -295,7 +295,26 @@ func parseResponses(section Section) []*ResponseIntermediate {
 
 		var responseType SchemerDefiner
 
-		if isSlice, v := IsSlice(goType); isSlice {
+		if isMap, k, v := IsMap(goType); isMap {
+
+			keyType := &MemberIntermediate{
+				Type:        k,
+				Validations: make(ValidationMap),
+			}
+
+			valueType := &MemberIntermediate{
+				Type:        v,
+				Validations: make(ValidationMap),
+			}
+
+			responseType = &MapIntermediate{
+				Type:        goType,
+				ValueType:   valueType,
+				KeyType:     keyType,
+				Validations: make(ValidationMap),
+			}
+
+		} else if isSlice, v := IsSlice(goType); isSlice {
 			valueType := &MemberIntermediate{
 				Type:        v,
 				Validations: make(ValidationMap),
