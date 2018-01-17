@@ -114,6 +114,7 @@ func mergeDefinitions(dst, src *DefinitionIntermediate) {
 	for srcName, srcMember := range src.Members {
 		_, exists := dst.Members[srcName]
 		if !exists {
+			srcMember.SetPackagePath(src.PackagePath)
 			dst.Members[srcName] = srcMember
 		}
 	}

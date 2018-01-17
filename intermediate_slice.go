@@ -30,6 +30,10 @@ func (this *SliceIntermediate) SetPackagePath(s string) {
 	this.PackagePath = s
 }
 
+func (this *SliceIntermediate) GetPackagePath() string {
+	return this.PackagePath
+}
+
 func (this *SliceIntermediate) SetPackageName(s string) {
 	this.PackageName = s
 }

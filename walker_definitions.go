@@ -61,6 +61,7 @@ func findDefinition(referringPackage, typeName string) (*DefinitionIntermediate,
 			ast.Walk(definitionVisitor, pkg)
 
 			if definitionVisitor.Definition != nil {
+
 				definition := definitionVisitor.Definition
 				definition.PackageName = pkg.Name
 				definition.PackagePath = importPath

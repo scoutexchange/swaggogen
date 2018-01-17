@@ -33,6 +33,10 @@ func (this *MemberIntermediate) SetPackagePath(s string) {
 	this.PackagePath = s
 }
 
+func (this *MemberIntermediate) GetPackagePath() string {
+	return this.PackagePath
+}
+
 func (this *MemberIntermediate) SetPackageName(s string) {
 	this.PackageName = s
 }

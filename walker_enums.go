@@ -55,7 +55,7 @@ func findEnumValues(referringPackage, typeName string) ([]interface{}, error) {
 			enumVisitor := &EnumVisitor{
 				Fset:     fset,
 				TypeName: typeName,
-				Values:   make([]interface{},0),
+				Values:   make([]interface{}, 0),
 			}
 
 			ast.Walk(enumVisitor, pkg)
@@ -115,7 +115,6 @@ func (this *EnumVisitor) Visit(node ast.Node) (w ast.Visitor) {
 				continue
 			}
 
-
 			if len(valSpec.Values) == 0 {
 				// Assume iota is in play.
 				iot++
@@ -139,10 +138,9 @@ func (this *EnumVisitor) Visit(node ast.Node) (w ast.Visitor) {
 				nam = valSpec.Names[0].Name
 			}
 
-			if nam == "_"{
+			if nam == "_" {
 				continue
 			}
-
 
 			this.Values = append(this.Values, val)
 

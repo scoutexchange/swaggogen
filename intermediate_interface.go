@@ -11,4 +11,5 @@ type SchemerDefiner interface {
 	GoType() string
 	SetPackagePath(string)
 	SetPackageName(string)
+	GetPackagePath() string
 }

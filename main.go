@@ -139,11 +139,9 @@ func main() {
 		tagIntermediates = append(tagIntermediates, newTagIntermediates...)
 	}
 
-
-
 	// I really don't like the way this is done.
 	// TODO: Make this more functional.
-	defStore,err := deriveDefinitionsFromOperations(operationIntermediates)
+	defStore, err := deriveDefinitionsFromOperations(operationIntermediates)
 	if err != nil {
 		log.Fatal(errors.Stack(err))
 	}

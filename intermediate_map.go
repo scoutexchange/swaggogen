@@ -23,7 +23,6 @@ func (this *MapIntermediate) IsRequired() bool {
 	return this.Validations.IsRequired()
 }
 
-
 func (this *MapIntermediate) GoType() string {
 	return this.Type
 }
@@ -32,10 +31,13 @@ func (this *MapIntermediate) SetPackagePath(s string) {
 	this.PackagePath = s
 }
 
+func (this *MapIntermediate) GetPackagePath() string {
+	return this.PackagePath
+}
+
 func (this *MapIntermediate) SetPackageName(s string) {
 	this.PackageName = s
 }
-
 
 func (this *MapIntermediate) Schema() *spec.Schema {
 

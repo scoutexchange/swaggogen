@@ -53,7 +53,7 @@ func deriveDefinitionsFromOperations(operationIntermediates []OperationIntermedi
 
 		defs, err := findNextUnknownDefinition(defStore)
 		if err != nil {
-			return defStore, nil
+			return defStore, errors.Stack(err)
 		}
 
 		if len(defs) > 0 {
@@ -71,53 +71,52 @@ func deriveDefinitionsFromOperations(operationIntermediates []OperationIntermedi
 // Otherwise, we risk a lot of duplicate lookups.
 func findNextUnknownDefinition(defStore DefinitionStore) ([]*DefinitionIntermediate, error) {
 
+	idx := 0
 	for _, def := range defStore {
 
-		goType := def.Name
-
-		defs, err := getDefinition(defStore, def.PackagePath, goType)
-		if err != nil {
-			return nil, errors.Stack(err)
-		}
-
-		if len(defs) > 0 {
-			return defs, nil
-		}
-
 		for _, member := range def.Members {
-			defs, err := getDefinition(defStore, def.PackagePath, member.GoType())
-			if err != nil {
-				return nil, errors.Stack(err)
+
+			//log.Printf("#%d Examining member: %s.%s (%s)", idx, def.Name, memberName, member.GoType())
+
+			var defs []*DefinitionIntermediate = make([]*DefinitionIntermediate, 0)
+
+			goTypes := getComponentTypes(member.GoType())
+			for _, goType := range goTypes {
+
+				if isPrimitive, _, _ := IsPrimitive(goType); isPrimitive {
+					continue
+				}
+
+				if _, ok := defStore.ExistsDefinition(def.PackagePath, goType); ok {
+					continue
+				}
+
+				// In the case of an embedded member, the package will be set internally.
+				referringPackage := def.PackagePath
+				if member.GetPackagePath() != "" {
+					referringPackage = member.GetPackagePath()
+				}
+
+				newDefs, err := getDefinition(defStore, referringPackage, goType)
+				if err != nil {
+					return nil, errors.Stack(err)
+				}
+
+				defs = append(defs, newDefs...)
 			}
 
 			if len(defs) > 0 {
 				return defs, nil
 			}
 		}
+
+		idx++
 	}
 
 	return nil, nil
 }
 
-// This is troublesome.
-// We have the definition store available, but I want to maintain a fairly
-// functional coding style. If we do the add here, we can do the add
-// intentionally, i.e. only when the add is necessary.
-// On the other hand, I doubt a duplicate addition would would cost much.
-// Or even happen frequently.
-func getDefinition(defStore DefinitionStore, referringPackage, goType string) ([]*DefinitionIntermediate, error) {
-
-	if referringPackage == "" {
-		return nil, errors.New("Referencing Package Path is empty.")
-	}
-
-	if goType == "nil" {
-		return nil, nil
-	}
-
-	if isPrimitive, _, _ := IsPrimitive(goType); isPrimitive {
-		return nil, nil
-	}
+func getComponentTypes(goType string) []string {
 
 	var types []string
 
@@ -130,25 +129,50 @@ func getDefinition(defStore DefinitionStore, referringPackage, goType string) ([
 		types = []string{goType}
 	}
 
+	return types
+}
+
+// This is troublesome.
+// We have the definition store available, but I want to maintain a fairly
+// functional coding style. If we do the add here, we can do the add
+// intentionally, i.e. only when the add is necessary.
+// On the other hand, I doubt a duplicate addition would would cost much.
+// Or even happen frequently.
+func getDefinition(defStore DefinitionStore, referringPackage, parentType string) ([]*DefinitionIntermediate, error) {
+
+	if referringPackage == "" {
+		return nil, errors.New("Referencing Package Path is empty.")
+	}
+
+	if parentType == "nil" {
+		return nil, nil
+	}
+
+	if isPrimitive, _, _ := IsPrimitive(parentType); isPrimitive {
+		return nil, nil
+	}
+
+	componentTypes := getComponentTypes(parentType)
+
 	var defs []*DefinitionIntermediate = make([]*DefinitionIntermediate, 0)
 
-	for _, typ := range types {
+	for _, goType := range componentTypes {
 
-		if isPrimitive, _, _ := IsPrimitive(typ); isPrimitive {
+		if isPrimitive, _, _ := IsPrimitive(goType); isPrimitive {
 			continue
 		}
 
-		def, ok := defStore.ExistsDefinition(referringPackage, typ)
+		def, ok := defStore.ExistsDefinition(referringPackage, goType)
 
 		if ok {
 			continue
 		}
 
-		def, err := findDefinition(referringPackage, typ)
+		def, err := findDefinition(referringPackage, goType)
 		if err != nil {
 			return defs, errors.Stack(err)
 		} else if def == nil {
-			return defs, errors.Newf("Failed to generate definition for type '%s' referenced in package '%s'", typ, referringPackage)
+			return defs, errors.Newf("Failed to generate definition for type '%s' referenced in package '%s'", goType, referringPackage)
 		}
 
 		// Embedded types require special treatment. we need the definitions
@@ -164,7 +188,7 @@ func getDefinition(defStore DefinitionStore, referringPackage, goType string) ([
 				if err != nil {
 					return nil, errors.Stack(err)
 				} else if embeddedDef == nil {
-					return defs, errors.Newf("Failed to generate definition for embedded type '%s' of '%s' referenced in package '%s'", embeddedType, typ, def.PackagePath)
+					return defs, errors.Newf("Failed to generate definition for embedded type '%s' of '%s' referenced in package '%s'", embeddedType, goType, def.PackagePath)
 				}
 			}
 

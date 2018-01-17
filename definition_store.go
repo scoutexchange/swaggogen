@@ -17,7 +17,7 @@ type DefinitionStore map[string]*DefinitionIntermediate
 
 func (this DefinitionStore) Add(intermediates ...*DefinitionIntermediate) {
 
-	for _, intermediate:= range intermediates{
+	for _, intermediate := range intermediates {
 		_, ok := this[intermediate.CanonicalName()]
 		if ok {
 			//log.Print("duplicate detected: " + intermediate.CanonicalName())
@@ -30,6 +30,8 @@ func (this DefinitionStore) Add(intermediates ...*DefinitionIntermediate) {
 
 func (this DefinitionStore) ExistsDefinition(referringPackage, typeName string) (*DefinitionIntermediate, bool) {
 
+	typeName = strings.TrimPrefix(typeName, "*")
+
 	pkgInfo := pkgInfos[referringPackage]
 	importPaths := possibleImportPaths(pkgInfo, typeName)
 
@@ -40,6 +42,10 @@ func (this DefinitionStore) ExistsDefinition(referringPackage, typeName string) 
 
 	for _, importPath := range importPaths {
 		for _, def := range this {
+			if def.Name != typeName {
+				continue
+			}
+
 			if def.PackagePath == importPath && def.Name == typeName {
 				return def, true
 			}
