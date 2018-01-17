@@ -117,6 +117,7 @@ func (this *DefinitionVisitor) Visit(node ast.Node) (w ast.Visitor) {
 				Documentation:  t.Doc.Text(),
 				UnderlyingType: resolveTypeExpression(t.Type),
 				Members:        make(map[string]SchemerDefiner),
+				EmbeddedTypes:  make([]string, 0),
 			}
 		} else {
 			return nil
@@ -147,11 +148,8 @@ func (this *DefinitionVisitor) Visit(node ast.Node) (w ast.Visitor) {
 
 		// Handle embedded structs.
 		if len(t.Names) == 0 {
-			//ast.Fprint(os.Stdout, this.Fset, t, nil)
+			//ast.Fprint(os.Stderr, this.Fset, t, nil)
 
-			if this.Definition.EmbeddedTypes == nil {
-				this.Definition.EmbeddedTypes = make([]string, 0)
-			}
 			embedded := resolveTypeExpression(t.Type)
 			this.Definition.EmbeddedTypes = append(this.Definition.EmbeddedTypes, embedded)
 			return nil
@@ -254,6 +252,8 @@ func (this *DefinitionVisitor) Visit(node ast.Node) (w ast.Visitor) {
 		return nil
 	case *ast.ImportSpec:
 		// Ignore import declarations.
+		return nil
+	case *ast.FuncType:
 		return nil
 	case nil:
 	default:

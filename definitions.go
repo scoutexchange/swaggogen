@@ -133,17 +133,22 @@ func getDefinition(defStore DefinitionStore, referringPackage, goType string) ([
 	var defs []*DefinitionIntermediate = make([]*DefinitionIntermediate, 0)
 
 	for _, typ := range types {
+
+		if isPrimitive, _, _ := IsPrimitive(typ); isPrimitive {
+			continue
+		}
+
 		def, ok := defStore.ExistsDefinition(referringPackage, typ)
 
 		if ok {
 			continue
 		}
 
-		def, err := findDefinition(referringPackage, goType)
+		def, err := findDefinition(referringPackage, typ)
 		if err != nil {
 			return defs, errors.Stack(err)
 		} else if def == nil {
-			return defs, errors.Newf("Failed to generate definition for type '%s' referenced in package '%s'", goType, referringPackage)
+			return defs, errors.Newf("Failed to generate definition for type '%s' referenced in package '%s'", typ, referringPackage)
 		}
 
 		// Embedded types require special treatment. we need the definitions
@@ -158,8 +163,8 @@ func getDefinition(defStore DefinitionStore, referringPackage, goType string) ([
 				embeddedDef, err = findDefinition(def.PackagePath, embeddedType)
 				if err != nil {
 					return nil, errors.Stack(err)
-				} else if def == nil {
-					return nil, errors.Newf("Failed to find definition for embedded member: %s:%s", goType, embeddedType)
+				} else if embeddedDef == nil {
+					return defs, errors.Newf("Failed to generate definition for embedded type '%s' of '%s' referenced in package '%s'", embeddedType, typ, def.PackagePath)
 				}
 			}
 
